@@ -1,11 +1,13 @@
 package dev.yuhantama.taskmanager.service;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
 import dev.yuhantama.taskmanager.Task;
+import dev.yuhantama.taskmanager.dto.TaskRequestDTO;
+import dev.yuhantama.taskmanager.dto.TaskResponseDTO;
 import dev.yuhantama.taskmanager.exception.ResourceNotFoundException;
 import dev.yuhantama.taskmanager.repository.TaskRepository;
 
@@ -18,40 +20,51 @@ public class TaskService {
         this.taskRepository = taskRepository;
     }
 
-    // 1. CREATE a new task
-    public Task createTask(Task task) {
-        return taskRepository.save(task);
+    // 1. CREATE (Accepts DTO, returns DTO)
+    public TaskResponseDTO createTask(TaskRequestDTO dto) {
+        // Convert DTO -> Entity
+        Task task = TaskMapper.toEntity(dto);
+        // Save to DB
+        Task savedTask = taskRepository.save(task);
+        // Convert Entity -> DTO and return
+        return TaskMapper.toResponseDTO(savedTask);
     }
 
-    // 2. READ all tasks
-    public List<Task> getAllTasks() {
-        return taskRepository.findAll();
+    // 2. READ all (Returns List of DTOs)
+    public List<TaskResponseDTO> getAllTasks() {
+        return taskRepository.findAll().stream()
+                .map(TaskMapper::toResponseDTO) // Convert each Entity to DTO
+                .collect(Collectors.toList());
     }
 
-    // 3. READ a single task by ID (returns Optional to handle cases where it
-    // doesn't exist)
-    public Task getTaskById(Long id) {
-        return taskRepository.findById(id)
+    // 3. READ single (Returns DTO)
+    public TaskResponseDTO getTaskById(Long id) {
+        Task task = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
+        return TaskMapper.toResponseDTO(task);
     }
 
-    // 4. UPDATE an existing task
-    public Task updateTask(Long id, Task updatedTask) {
-        // Find the existing task. If it doesn't exist, the lambda throws our custom
-        // exception.
+    // 4. UPDATE (Accepts DTO, returns DTO)
+    public TaskResponseDTO updateTask(Long id, TaskRequestDTO dto) {
+        // Find existing task
         Task existingTask = taskRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found with id: " + id));
 
-        // If it exists, update the fields
-        existingTask.setTitle(updatedTask.getTitle());
-        existingTask.setDescription(updatedTask.getDescription());
-        existingTask.setCompleted(updatedTask.isCompleted());
+        // Update ONLY the fields that are allowed to be changed
+        existingTask.setTitle(dto.getTitle());
+        existingTask.setDescription(dto.getDescription());
+        existingTask.setCompleted(dto.isCompleted());
 
-        return taskRepository.save(existingTask);
+        // Save and return DTO
+        Task updatedTask = taskRepository.save(existingTask);
+        return TaskMapper.toResponseDTO(updatedTask);
     }
 
-    // 5. DELETE a task by ID
+    // 5. DELETE (No DTO needed, just ID)
     public void deleteTask(Long id) {
+        if (!taskRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Task not found with id: " + id);
+        }
         taskRepository.deleteById(id);
     }
 }
