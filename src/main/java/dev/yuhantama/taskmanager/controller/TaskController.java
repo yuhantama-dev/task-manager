@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.RestController;
 import dev.yuhantama.taskmanager.Task;
 import dev.yuhantama.taskmanager.service.TaskService;
 
-@RestController              // Tells Spring: "This class handles HTTP requests and returns JSON"
+@RestController // Tells Spring: "This class handles HTTP requests and returns JSON"
 @RequestMapping("/api/tasks") // All endpoints in this class will start with /api/tasks
 public class TaskController {
 
@@ -44,23 +44,15 @@ public class TaskController {
     // 3. READ a single task by ID (GET /api/tasks/{id})
     @GetMapping("/{id}")
     public ResponseEntity<Task> getTaskById(@PathVariable Long id) {
-        // If the task exists, return HTTP 200 with the task.
-        // If not, return HTTP 404 Not Found.
-        return taskService.getTaskById(id)
-                .map(ResponseEntity::ok)          // If present, wrap in 200 OK
-                .orElse(ResponseEntity.notFound().build()); // If empty, return 404
+        Task task = taskService.getTaskById(id); // This will throw ResourceNotFoundException if not found
+        return ResponseEntity.ok(task);
     }
 
     // 4. UPDATE a task by ID (PUT /api/tasks/{id})
     @PutMapping("/{id}")
     public ResponseEntity<Task> updateTask(@PathVariable Long id, @RequestBody Task task) {
-        try {
-            Task updatedTask = taskService.updateTask(id, task);
-            return ResponseEntity.ok(updatedTask); // HTTP 200 OK
-        } catch (RuntimeException e) {
-            // If the service throws "Task not found", we catch it and return 404
-            return ResponseEntity.notFound().build();
-        }
+        Task updatedTask = taskService.updateTask(id, task); // This will throw ResourceNotFoundException if not found
+        return ResponseEntity.ok(updatedTask);
     }
 
     // 5. DELETE a task by ID (DELETE /api/tasks/{id})
